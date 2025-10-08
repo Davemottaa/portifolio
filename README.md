@@ -4,42 +4,44 @@
 [![Tests](https://github.com/Davemottaa/portifolio/actions/workflows/test.yml/badge.svg)](https://github.com/Davemottaa/portifolio/actions/workflows/test.yml)
 [![GitHub Pages](https://github.com/Davemottaa/portifolio/actions/workflows/deploy-pages.yml/badge.svg)](https://github.com/Davemottaa/portifolio/actions/workflows/deploy-pages.yml)
 
-Este repositório contém meu portfólio profissional e um token demonstrativo chamado "Davi Mota Token (DMT)" na rede Sepolia. O projeto inclui um faucet com sistema de cooldown para distribuir tokens de teste.
+This repository contains my professional portfolio and a demonstration token called **“Davi Mota Token (DMT)”** deployed on the Sepolia network.  
+The project includes a faucet with a cooldown system to distribute test tokens.
 
 ## 🚀 Features
 
 - **Smart Contract (DaviMotaToken)**:
-  - Token ERC-20 personalizado
-  - Sistema de faucet com cooldown
-  - Funções administrativas protegidas
-  - Testes completos com Hardhat
-  - Deploy na rede Sepolia
+  - Custom ERC-20 token  
+  - Faucet system with cooldown  
+  - Protected admin functions  
+  - Full Hardhat testing  
+  - Deployed on Sepolia testnet  
 
 - **Frontend**:
-  - Interface responsiva moderna
-  - Integração com MetaMask
-  - Sistema de faucet interativo
-  - Seção de doações em crypto
-  - Portfolio profissional integrado
+  - Modern responsive interface  
+  - MetaMask integration  
+  - Interactive faucet system  
+  - Crypto donation section  
+  - Integrated professional portfolio  
 
-## 🛠️ Tecnologias
+## 🛠️ Technologies
 
-- Solidity ^0.8.20
-- Hardhat
-- Ethers.js
-- HTML5/CSS3/JavaScript
-- GitHub Actions
+- Solidity ^0.8.20  
+- Hardhat  
+- Ethers.js  
+- HTML5 / CSS3 / JavaScript  
+- GitHub Actions  
 
-- `DaviMotaToken.sol` — Solidity token contract with a faucet (claim + cooldown).
- - `frontend/index.html`, `frontend/style.css`, `frontend/script.js` — frontend for the portfolio and faucet UI.
-- `package.json` — project scripts and dev dependencies (Hardhat).
+- `DaviMotaToken.sol` — Solidity token contract with faucet (claim + cooldown)  
+- `frontend/index.html`, `frontend/style.css`, `frontend/script.js` — frontend for portfolio and faucet UI  
+- `package.json` — project scripts and dev dependencies (Hardhat)  
 
-This project is intended as a demo. Do not use the included contract in production without a security review and an external audit.
+This project is intended for demo purposes only.  
+**Do not use the included contract in production without a security review or external audit.**
 
 ## Prerequisites
 
-- Node.js v18 or newer
-- npm (or yarn)
+- Node.js v18 or newer  
+- npm (or yarn)  
 
 Optional: install `ethers` for local frontend tooling:
 
@@ -65,14 +67,14 @@ The included `hardhat.config.js` targets Solidity 0.8.20 and provides a sample S
 
 ## Deploy (example using Hardhat)
 
-1. Configure environment variables for your RPC provider and deployer private key (do not commit private keys):
+1. Configure environment variables for your RPC provider and deployer private key (do **not** commit private keys):
 
 ```bash
 export RPC_URL="https://sepolia.infura.io/v3/YOUR_INFURA_KEY"
 export PRIVATE_KEY="0x..."
 ```
 
-2. Example deploy script (in `scripts/deploy.js`):
+2. Example deploy script (`scripts/deploy.js`):
 
 ```js
 async function main() {
@@ -92,66 +94,65 @@ main().catch((error) => { console.error(error); process.exitCode = 1; });
 npx hardhat run scripts/deploy.js --network sepolia
 ```
 
-After deployment, update `TOKEN_CONTRACT_ADDRESS` in `script.js` and optionally in `index.html` so the frontend points to your deployed contract.
+After deployment, update `TOKEN_CONTRACT_ADDRESS` in `script.js` (and optionally in `index.html`) so the frontend points to your deployed contract.
 
 ## Frontend usage (faucet)
 
-1. Serve `index.html` locally (for example, with `http-server` or Live Server) or open it directly in a browser.
-2. Connect MetaMask and ensure you are on Sepolia Testnet.
-3. Click "Connect Wallet" and then "Claim Tokens" to call the contract's `claim()` function.
+1. Serve `index.html` locally (using `http-server`, Live Server, etc.) or open it directly in a browser.  
+2. Connect MetaMask and make sure you’re on the **Sepolia Testnet**.  
+3. Click **"Connect Wallet"** and then **"Claim Tokens"** to call the contract’s `claim()` function.
 
 Notes:
+- `script.js` includes helper functions to connect MetaMask, add the Sepolia network, and call `claim()` using `ethers.js` and a minimal ABI.  
+- Replace the placeholder RPC URL in `addSepoliaNetwork()` with your Infura or Alchemy endpoint if needed.  
 
-- `script.js` contains helper functions to connect MetaMask, add the Sepolia network, and call `claim()` using `ethers.js` and a minimal ABI.
-- Replace the placeholder RPC URL in `addSepoliaNetwork()` with your full RPC endpoint (Infura/Alchemy) if required.
+## Security & Best Practices
 
-## Security & best practices
+- Use OpenZeppelin Contracts (`ERC20`, `Ownable`, `Pausable`, `ReentrancyGuard`) for production-grade tokens.  
+- Avoid holding large funds with a single key — use multisig for admin operations.  
+- Add unit tests for critical flows: claim success, cooldown enforcement, refill/withdraw, ownership transfer.  
+- Consider adding `Pausable` to pause the faucet in case of emergency.  
+- Plan for an external audit before deploying to mainnet.  
 
-- Prefer OpenZeppelin Contracts (ERC20, Ownable, Pausable, ReentrancyGuard) for production contracts.
-- Avoid holding large funds in a single key; use a multisig for admin operations.
-- Add unit tests for critical flows: claim success, cooldown enforcement, refill/withdraw, ownership transfer.
-- Consider adding `Pausable` to be able to pause the faucet in emergencies.
-- Plan for an external audit before deploying to mainnet.
+## Pre-deploy Checklist
 
-## Pre-deploy checklist
+- [ ] Migrate the token to an OpenZeppelin-based ERC20 (if desired)  
+- [ ] Add and run automated tests  
+- [ ] Configure RPC keys and PRIVATE_KEY securely  
+- [ ] Verify the contract address in the frontend (`script.js` and `index.html`)  
+- [ ] Review faucet limits and anti-bot measures before making it public  
 
-- [ ] Migrate the token to an OpenZeppelin-based ERC20 (if desired)
-- [ ] Add and run automated tests
-- [ ] Configure RPC keys and PRIVATE_KEY securely
-- [ ] Verify contract address is set in the frontend (`script.js` and `index.html`)
-- [ ] Review faucet limits and anti-bot protections if making it public
+## Recommended Next Steps
 
-## Recommended next steps
+- Migrate the token contract to OpenZeppelin’s ERC20 + Ownable and add ReentrancyGuard/Pausable.  
+- Keep the frontend using `ethers.js` + ABI for on-chain interactions (`balanceOf`, `faucetBalance`, `lastClaimTime`).  
+- Add test scripts and CI workflows (GitHub Actions) to automatically run `npx hardhat test` and `npx hardhat compile` on PRs.  
+- Update the README with your deployed contract address and instructions for adding the token to MetaMask (address, decimals, symbol).  
 
-- Migrate the token contract to OpenZeppelin ERC20 + Ownable and add ReentrancyGuard/Pausable.
-- Keep the frontend using `ethers.js` + ABI for on-chain calls (balanceOf, faucetBalance, lastClaimTime).
-- Add test scripts and CI workflows (GitHub Actions) to run `npx hardhat test` and `npx hardhat compile` on PRs.
-- Update the README with the deployed contract address and instructions to add the token to MetaMask (address, decimals, symbol).
+## Important Files
 
-## Important files
+- `DaviMotaToken.sol` — token + faucet contract  
+- `index.html`, `script.js`, `style.css` — frontend files  
+- `package.json` — project scripts and dependencies  
 
-- `DaviMotaToken.sol` — token + faucet contract
-- `index.html`, `script.js`, `style.css` — frontend
-- `package.json` — project scripts and dependencies
-
-If you want me to implement improvements automatically (for example: create `hardhat.config.js`, migrate to OpenZeppelin, update `script.js` to use `ethers.js`, or add basic tests), tell me which option and I'll apply the changes in the workspace.
+If you’d like me to automatically implement improvements (for example: create `hardhat.config.js`, migrate to OpenZeppelin, update `script.js` to use `ethers.js`, or add basic tests), tell me which option you want and I’ll apply the changes in the workspace.
 
 ---
 
-## GitHub Pages deployment
+## GitHub Pages Deployment
 
-This repository includes a GitHub Actions workflow that publishes the static frontend in `frontend/` to GitHub Pages on each push to `main`.
+This repository includes a GitHub Actions workflow that publishes the static frontend in `frontend/` to **GitHub Pages** on each push to the `main` branch.
 
-How it works:
-- The workflow `.github/workflows/deploy-pages.yml` checks out the repo and publishes the `frontend/` folder using `peaceiris/actions-gh-pages`.
-- Pages will be served from the `gh-pages` branch created by the action.
+**How it works:**
+- The workflow `.github/workflows/deploy-pages.yml` checks out the repository and publishes the `frontend/` folder using `peaceiris/actions-gh-pages`.  
+- Pages will be served from the `gh-pages` branch created by the workflow.
 
-To enable Pages on the repository (one-time in GitHub UI):
-1. Go to the repository on GitHub → Settings → Pages.
-2. Select `gh-pages` branch as the source (the action will create it on first run).
-3. Save. After the workflow runs, your site will be available at the Pages URL shown in the settings.
+**To enable Pages (one-time setup in GitHub UI):**
+1. Go to your repository → **Settings → Pages**.  
+2. Select the `gh-pages` branch as the source (the action will create it on the first run).  
+3. Save. Once the workflow runs, your site will be available at the Pages URL shown in the settings.  
 
-Local preview:
+**Local preview:**
 
 ```bash
 npm install
