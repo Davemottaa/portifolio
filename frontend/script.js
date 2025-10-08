@@ -1,6 +1,26 @@
-// Frontend script copied from project root (canonical)
-// The full script logic is preserved here for serving from frontend/.
-// ...existing content from root script.js...
+// Função para inicializar as animações
+function initAnimations() {
+    const observerOptions = {
+        threshold: 0.2,
+        rootMargin: '0px 0px -10% 0px'
+    };
+
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('visible');
+                // Uma vez que o elemento se tornou visível, podemos parar de observá-lo
+                observer.unobserve(entry.target);
+            }
+        });
+    }, observerOptions);
+
+    // Observa todos os elementos com a classe fade-in
+    document.querySelectorAll('.fade-in').forEach(el => {
+        observer.observe(el);
+    });
+}
+
 // Mobile Menu Toggle
 function toggleMenu() {
     const menu = document.getElementById('navMenu');
@@ -8,44 +28,70 @@ function toggleMenu() {
 }
 
 // Smooth Scroll
-document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-    anchor.addEventListener('click', function (e) {
-        e.preventDefault();
-        const target = document.querySelector(this.getAttribute('href'));
-        if (target) {
-            target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            document.getElementById('navMenu').classList.remove('active');
-        }
-    });
-});
-
-// Scroll Animation
-document.addEventListener('DOMContentLoaded', () => {
-    const observerOptions = {
-        threshold: 0.1,
-        rootMargin: '0px 0px -50px 0px'
-    };
-
-    const observer = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                entry.target.classList.add('visible');
+function initSmoothScroll() {
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener('click', function (e) {
+            e.preventDefault();
+            const target = document.querySelector(this.getAttribute('href'));
+            if (target) {
+                target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                // Fecha o menu mobile se estiver aberto
+                document.getElementById('navMenu').classList.remove('active');
             }
         });
-    }, observerOptions);
-
-    // Observe all elements with fade-in class
-    const fadeElements = document.querySelectorAll('.fade-in');
-    fadeElements.forEach(el => {
-        observer.observe(el);
-        // Ensure elements start invisible
-        el.style.opacity = '0';
     });
+}
 
-    // Trigger initial check
-    setTimeout(() => {
-        window.scrollTo(window.scrollX, window.scrollY + 1);
-    }, 100);
+// Active Nav Link
+function updateActiveNavLink() {
+    const sections = document.querySelectorAll('section');
+    const navLinks = document.querySelectorAll('nav a');
+    
+    let current = '';
+    
+    sections.forEach(section => {
+        const sectionTop = section.offsetTop;
+        const sectionHeight = section.clientHeight;
+        if (window.scrollY >= (sectionTop - sectionHeight / 3)) {
+            current = section.getAttribute('id');
+        }
+    });
+    
+    navLinks.forEach(link => {
+        link.classList.remove('active');
+        if (link.getAttribute('href').slice(1) === current) {
+            link.classList.add('active');
+        }
+    });
+}
+
+// Initialize everything when DOM is ready
+document.addEventListener('DOMContentLoaded', () => {
+    try {
+        console.log('Initializing...');
+        initAnimations();
+        initSmoothScroll();
+        
+        // Event listeners
+        window.addEventListener('scroll', updateActiveNavLink);
+        window.addEventListener('resize', () => {
+            // Atualiza qualquer lógica dependente do tamanho da tela
+        });
+
+        // Força uma verificação inicial do scroll
+        updateActiveNavLink();
+        
+        // Debug log
+        console.log('Initialization complete');
+
+        // Força uma atualização inicial das animações
+        setTimeout(() => {
+            window.scrollBy(0, 1);
+            window.scrollBy(0, -1);
+        }, 100);
+    } catch (error) {
+        console.error('Error during initialization:', error);
+    }
 });
 
 // Active Nav Link
