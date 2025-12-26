@@ -128,7 +128,7 @@ ul { list-style: none; }
 .btn-outline { background: transparent; border: 1px solid var(--glass-border); color: #fff; }
 .btn-outline:hover { border-color: var(--secondary); color: var(--secondary); }
 
-.tech-row { display: flex; gap: 20px; color: var(--text-secondary); font-size: 0.9rem; }
+.tech-row { display: flex; gap: 20px; color: var(--text-secondary); font-size: 0.9rem; justify-content: center; }
 .tech-row i { color: var(--secondary); }
 
 /* Floating Code Card */
