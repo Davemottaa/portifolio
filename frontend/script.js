@@ -1,484 +1,274 @@
-// Função para inicializar as animações
-function initAnimations() {
-    const observerOptions = {
-        threshold: 0.2,
-        rootMargin: '0px 0px -10% 0px'
-    };
+/**
+ * DAVI MOTA PORTFOLIO - MAIN SCRIPT
+ * Stack: Vanilla JS + Ethers.js v6
+ */
 
-    const observer = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                entry.target.classList.add('visible');
-                // Uma vez que o elemento se tornou visível, podemos parar de observá-lo
-                observer.unobserve(entry.target);
-            }
-        });
-    }, observerOptions);
+// --- Constants ---
+const WALLET_ADDRESS = '0x5168944c344bC9306AA804d31ebedfc1BD58F001'; // Sua carteira pessoal
+const TOKEN_CONTRACT_ADDRESS = '0x14dd4fa2ec111b5777e26c91bbcda31b7eb5ce9f'; // Seu contrato na Sepolia
+const SEPOLIA_CHAIN_ID = '0xaa36a7'; // Chain ID Hex para Sepolia (11155111)
 
-    // Observa todos os elementos com a classe fade-in
-    document.querySelectorAll('.fade-in').forEach(el => {
-        observer.observe(el);
-    });
-}
-
-// Mobile Menu Toggle
-function toggleMenu() {
-    const menu = document.getElementById('navMenu');
-    menu.classList.toggle('active');
-}
-
-// Smooth Scroll
-function initSmoothScroll() {
-    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-        anchor.addEventListener('click', function (e) {
-            e.preventDefault();
-            const target = document.querySelector(this.getAttribute('href'));
-            if (target) {
-                target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                // Fecha o menu mobile se estiver aberto
-                document.getElementById('navMenu').classList.remove('active');
-            }
-        });
-    });
-}
-
-// Active Nav Link
-function updateActiveNavLink() {
-    const sections = document.querySelectorAll('section');
-    const navLinks = document.querySelectorAll('nav a');
-    
-    let current = '';
-    
-    sections.forEach(section => {
-        const sectionTop = section.offsetTop;
-        const sectionHeight = section.clientHeight;
-        if (window.scrollY >= (sectionTop - sectionHeight / 3)) {
-            current = section.getAttribute('id');
-        }
-    });
-    
-    navLinks.forEach(link => {
-        link.classList.remove('active');
-        if (link.getAttribute('href').slice(1) === current) {
-            link.classList.add('active');
-        }
-    });
-}
-
-// Initialize everything when DOM is ready
-document.addEventListener('DOMContentLoaded', () => {
-    try {
-        console.log('Initializing...');
-        initAnimations();
-        initSmoothScroll();
-        
-        // Event listeners
-        window.addEventListener('scroll', updateActiveNavLink);
-        window.addEventListener('resize', () => {
-            // Atualiza qualquer lógica dependente do tamanho da tela
-        });
-
-        // Força uma verificação inicial do scroll
-        updateActiveNavLink();
-        
-        // Debug log
-        console.log('Initialization complete');
-
-        // Força uma atualização inicial das animações
-        setTimeout(() => {
-            window.scrollBy(0, 1);
-            window.scrollBy(0, -1);
-        }, 100);
-    } catch (error) {
-        console.error('Error during initialization:', error);
-    }
-});
-
-// Active Nav Link
-window.addEventListener('scroll', () => {
-    let current = '';
-    const sections = document.querySelectorAll('section');
-    
-    sections.forEach(section => {
-        const sectionTop = section.offsetTop;
-        const sectionHeight = section.clientHeight;
-        if (scrollY >= (sectionTop - 200)) {
-            current = section.getAttribute('id');
-        }
-    });
-
-    document.querySelectorAll('nav a').forEach(link => {
-        link.style.color = '';
-        if (link.getAttribute('href') === `#${current}`) {
-            link.style.color = 'var(--primary)';
-        }
-    });
-});
-
-// ============================================
-// BLOCKCHAIN DONATION & FAUCET (ethers.js)
-// ============================================
-
-// Your Ethereum wallet address for donations
-const WALLET_ADDRESS = '0x5168944c344bC9306AA804d31ebedfc1BD58F001';
-
-// Token Contract Address (atualize para o seu deploy)
-const TOKEN_CONTRACT_ADDRESS = '0x14dd4fa2ec111b5777e26c91bbcda31b7eb5ce9f';
-
-// Minimal ABI para as chamadas que usamos
+// ABI Mínima para interação com o contrato
 const TOKEN_ABI = [
     'function balanceOf(address) view returns (uint256)',
     'function faucetBalance() view returns (uint256)',
-    'function lastClaimTime(address) view returns (uint256)',
     'function claim()'
 ];
 
+// Estado Global Web3
 let provider = null;
 let signer = null;
 let userAddress = null;
 let tokenContract = null;
 
-// Connect wallet for faucet using ethers.js
-async function connectFaucetWallet() {
+document.addEventListener('DOMContentLoaded', () => {
+    initUI();
+    initScrollEffects();
+    initWeb3Listeners();
+});
+
+/* =========================================
+   1. UI & UX INTERACTIONS
+   ========================================= */
+
+function initUI() {
+    // Mobile Menu Toggle
+    const mobileBtn = document.getElementById('mobile-menu-btn');
+    const navList = document.getElementById('nav-list');
+    
+    if (mobileBtn) {
+        mobileBtn.addEventListener('click', () => {
+            navList.classList.toggle('active');
+            const icon = mobileBtn.querySelector('i');
+            
+            // Alterna ícone entre Bars e Times (X)
+            if (navList.classList.contains('active')) {
+                icon.classList.remove('fa-bars');
+                icon.classList.add('fa-times');
+                document.body.style.overflow = 'hidden'; // Bloqueia scroll
+            } else {
+                icon.classList.remove('fa-times');
+                icon.classList.add('fa-bars');
+                document.body.style.overflow = 'auto'; // Libera scroll
+            }
+        });
+
+        // Fecha menu ao clicar em link
+        document.querySelectorAll('.nav-list a').forEach(link => {
+            link.addEventListener('click', () => {
+                navList.classList.remove('active');
+                mobileBtn.querySelector('i').classList.remove('fa-times');
+                mobileBtn.querySelector('i').classList.add('fa-bars');
+                document.body.style.overflow = 'auto';
+            });
+        });
+    }
+
+    // Scroll Reveal Animation (Intersection Observer)
+    const observerOptions = { threshold: 0.15, rootMargin: "0px 0px -50px 0px" };
+    
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('show');
+                observer.unobserve(entry.target); // Anima apenas uma vez
+            }
+        });
+    }, observerOptions);
+
+    document.querySelectorAll('.hidden').forEach(el => observer.observe(el));
+    
+    // Gerar QR Code Estilizado (Canvas Mockup)
+    generateStyledQRCode();
+}
+
+function initScrollEffects() {
+    const nav = document.querySelector('.glass-nav');
+    const sections = document.querySelectorAll('section');
+    const navLinks = document.querySelectorAll('.nav-list a');
+
+    window.addEventListener('scroll', () => {
+        let current = '';
+        const scrollY = window.scrollY;
+
+        // 1. Navbar Glass Effect
+        if (scrollY > 50) {
+            nav.style.background = 'rgba(11, 11, 14, 0.95)';
+            nav.style.padding = '10px 0';
+            nav.style.boxShadow = '0 4px 20px rgba(0,0,0,0.4)';
+        } else {
+            nav.style.background = 'rgba(11, 11, 14, 0.7)';
+            nav.style.padding = '15px 0';
+            nav.style.boxShadow = 'none';
+        }
+
+        // 2. Active Link Highlighting
+        sections.forEach(section => {
+            const sectionTop = section.offsetTop;
+            const sectionHeight = section.clientHeight;
+            
+            if (scrollY >= (sectionTop - 200)) {
+                current = section.getAttribute('id');
+            }
+        });
+
+        navLinks.forEach(link => {
+            link.classList.remove('nav-highlight');
+            if (link.getAttribute('href').includes(current)) {
+                link.classList.add('nav-highlight');
+            }
+        });
+    });
+}
+
+// Utilitário para copiar texto
+window.copyToClipboard = (elementId) => {
+    const text = document.getElementById(elementId).innerText;
+    navigator.clipboard.writeText(text).then(() => {
+        // Feedback visual simples
+        const btn = document.querySelector(`button[onclick="copyToClipboard('${elementId}')"]`);
+        const originalIcon = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-check" style="color: #00ff88;"></i>';
+        setTimeout(() => { btn.innerHTML = originalIcon; }, 2000);
+    }).catch(err => console.error('Erro ao copiar:', err));
+};
+
+/* =========================================
+   2. WEB3 & FAUCET LOGIC (Ethers v6)
+   ========================================= */
+
+function initWeb3Listeners() {
+    const connectBtn = document.getElementById('connect-wallet-btn');
+    const claimBtn = document.getElementById('claim-btn');
+
+    if (connectBtn) connectBtn.addEventListener('click', connectWallet);
+    if (claimBtn) claimBtn.addEventListener('click', claimTokens);
+}
+
+async function connectWallet() {
     if (typeof window.ethereum === 'undefined') {
-        showFaucetStatus('Please install MetaMask or another Web3 wallet!', 'error');
-        setTimeout(() => window.open('https://metamask.io/download/', '_blank'), 2000);
+        alert('MetaMask não detectada! Por favor instale para interagir.');
+        window.open('https://metamask.io/download/', '_blank');
         return;
     }
 
+    const connectBtn = document.getElementById('connect-wallet-btn');
+    connectBtn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Connecting...';
+
     try {
-        // Request account access
-        await window.ethereum.request({ method: 'eth_requestAccounts' });
+        // 1. Conectar Carteira
         provider = new ethers.BrowserProvider(window.ethereum);
+        await provider.send("eth_requestAccounts", []);
         signer = await provider.getSigner();
         userAddress = await signer.getAddress();
 
-        // Check network (Sepolia chainId decimal = 11155111)
+        // 2. Verificar Rede (Sepolia)
         const network = await provider.getNetwork();
-        if (network.chainId !== 11155111) {
-            showFaucetStatus('Please switch to Sepolia Testnet', 'error');
-            await addSepoliaNetwork();
-            return;
-        }
-
-        // Initialize contract with signer
-        tokenContract = new ethers.Contract(TOKEN_CONTRACT_ADDRESS, TOKEN_ABI, provider);
-
-        // Update UI
-        document.getElementById('faucetStatusText').textContent = 'Wallet Connected ✓';
-        document.getElementById('faucetWalletStatus').classList.add('connected');
-        document.getElementById('connectFaucetWallet').style.display = 'none';
-        document.getElementById('claimTokens').style.display = 'block';
-        document.getElementById('faucetWalletInfo').style.display = 'block';
-        document.getElementById('faucetConnectedAddress').textContent = userAddress;
-
-        // Load balances
-        await loadFaucetBalances();
-
-        showFaucetStatus('Wallet connected successfully!', 'success');
-    } catch (err) {
-        console.error('Error connecting wallet:', err);
-        showFaucetStatus('Failed to connect: ' + (err.message || err), 'error');
-    }
-}
-
-// Load faucet and user balances using ethers
-async function loadFaucetBalances() {
-    try {
-        if (!tokenContract) {
-            // show placeholders
-            document.getElementById('faucetBalance').textContent = '—';
-            document.getElementById('userTokenBalance').textContent = '—';
-            return;
-        }
-
-        // Read faucet balance and user balance
-        const [faucetBal, userBal] = await Promise.all([
-            tokenContract.faucetBalance().catch(() => null),
-            tokenContract.balanceOf(userAddress).catch(() => null)
-        ]);
-
-        const decimals = 18;
-        if (faucetBal !== null) {
-            document.getElementById('faucetBalance').textContent = ethers.formatUnits(faucetBal, decimals) + ' DMT';
-        } else {
-            document.getElementById('faucetBalance').textContent = 'N/A';
-        }
-
-        if (userBal !== null) {
-            document.getElementById('userTokenBalance').textContent = ethers.formatUnits(userBal, decimals);
-        } else {
-            document.getElementById('userTokenBalance').textContent = '0';
-        }
-    } catch (err) {
-        console.error('Error loading balances:', err);
-    }
-}
-
-// Claim tokens from faucet using signer
-async function claimFaucetTokens() {
-    if (!signer) {
-        showFaucetStatus('Please connect your wallet first!', 'error');
-        return;
-    }
-
-    if (!tokenContract) {
-        showFaucetStatus('Contract not initialized', 'error');
-        return;
-    }
-
-    try {
-    showFaucetStatus('Processing claim... please confirm the transaction in your wallet', 'pending');
-
-        const contractWithSigner = tokenContract.connect(signer);
-        const tx = await contractWithSigner.claim();
-
-    showFaucetStatus(`Tx sent: ${tx.hash.substring(0, 10)}... waiting for confirmation`, 'info');
-
-        const receipt = await tx.wait();
-        if (receipt.status === 1) {
-            showFaucetStatus('🎉 Tokens claimed! Check your wallet.', 'success');
-            // Reload balances
-            setTimeout(loadFaucetBalances, 1500);
-        } else {
-            showFaucetStatus('Transaction failed', 'error');
-        }
-    } catch (err) {
-        console.error('Error during claim:', err);
-        if (err.code === 4001) {
-            showFaucetStatus('Transaction rejected by the user', 'error');
-        } else if (err.message && err.message.toLowerCase().includes('cooldown')) {
-            showFaucetStatus('Please wait 24 hours between claims', 'error');
-        } else {
-            showFaucetStatus('Claim failed: ' + (err.message || err), 'error');
-        }
-    }
-}
-
-// Add Sepolia network to MetaMask (same as before)
-async function addSepoliaNetwork() {
-    if (!window.ethereum) return;
-    try {
-        await window.ethereum.request({
-            method: 'wallet_addEthereumChain',
-            params: [{
-                chainId: '0xaa36a7',
-                chainName: 'Sepolia Testnet',
-                nativeCurrency: { name: 'Sepolia ETH', symbol: 'SEP', decimals: 18 },
-                rpcUrls: ['https://sepolia.infura.io/v3/'],
-                blockExplorerUrls: ['https://sepolia.etherscan.io/']
-            }]
-        });
-        showFaucetStatus('Sepolia added! Please try connecting again.', 'success');
-    } catch (err) {
-        console.error('Error adding Sepolia:', err);
-        showFaucetStatus('Failed to add Sepolia', 'error');
-    }
-}
-
-// Show faucet status message
-function showFaucetStatus(message, type) {
-    const statusDiv = document.getElementById('faucetStatus');
-    statusDiv.textContent = message;
-    statusDiv.className = `faucet-status ${type}`;
-    
-    if (type === 'success' || type === 'error') {
-        setTimeout(() => {
-            statusDiv.textContent = '';
-            statusDiv.className = 'faucet-status';
-        }, 5000);
-    }
-}
-
-// ============================================
-// DONATION FUNCTIONALITY
-// ============================================
-
-// Open user's wallet with your address pre-filled
-async function openWalletForDonation() {
-    const statusDiv = document.getElementById('donationStatus');
-    
-    // Check if any Web3 wallet is available
-    if (typeof window.ethereum !== 'undefined') {
-        try {
-            // Request account access
-            const accounts = await window.ethereum.request({ 
-                method: 'eth_requestAccounts' 
-            });
-            
-            if (accounts.length > 0) {
-                // Open transaction with pre-filled recipient address
+        // Nota: ethers v6 retorna bigint para chainId
+        if (network.chainId !== 11155111n) {
+            try {
                 await window.ethereum.request({
-                    method: 'eth_sendTransaction',
-                    params: [{
-                        from: accounts[0],
-                        to: WALLET_ADDRESS,
-                        value: '0x0', // User will input amount in their wallet
-                    }],
+                    method: 'wallet_switchEthereumChain',
+                    params: [{ chainId: SEPOLIA_CHAIN_ID }],
                 });
-                
-                showDonationStatus('Thank you! Transaction initiated 🙏', 'success');
-            }
-        } catch (error) {
-            console.error('Wallet error:', error);
-            
-            if (error.code === 4001) {
-                showDonationStatus('Transaction cancelled', 'info');
-            } else if (error.code === -32002) {
-                showDonationStatus('Please check your wallet - a connection request is pending', 'info');
-            } else {
-                showDonationStatus('Error: ' + error.message, 'info');
+                // Recarregar provider após troca de rede
+                provider = new ethers.BrowserProvider(window.ethereum);
+                signer = await provider.getSigner();
+            } catch (switchError) {
+                // Se a rede não existir, adicionar (código omitido para brevidade)
+                alert("Por favor, mude para a rede Sepolia manualmente.");
+                connectBtn.innerHTML = '<i class="fas fa-wallet"></i> Connect Wallet';
+                return;
             }
         }
-    } else {
-        // No Web3 wallet detected
-        showDonationStatus('No Web3 wallet detected. Please install MetaMask, Trust Wallet, or another Web3 wallet.', 'info');
-        
-        // Open MetaMask download page after 2 seconds
-        setTimeout(() => {
-            window.open('https://metamask.io/download/', '_blank');
-        }, 2000);
+
+        // 3. Inicializar Contrato
+        tokenContract = new ethers.Contract(TOKEN_CONTRACT_ADDRESS, TOKEN_ABI, signer);
+
+        // 4. Atualizar UI
+        updateConnectedUI();
+        loadBalances();
+
+    } catch (error) {
+        console.error("Erro ao conectar:", error);
+        connectBtn.innerHTML = '<i class="fas fa-exclamation-circle"></i> Error';
+        setTimeout(() => connectBtn.innerHTML = '<i class="fas fa-wallet"></i> Connect Wallet', 2000);
     }
 }
 
-// Show donation status message
-function showDonationStatus(message, type) {
-    const statusDiv = document.getElementById('donationStatus');
-    statusDiv.textContent = message;
-    statusDiv.className = `donation-status ${type}`;
+function updateConnectedUI() {
+    document.getElementById('connect-wallet-btn').style.display = 'none';
+    document.getElementById('wallet-actions').style.display = 'block';
     
-    setTimeout(() => {
-        statusDiv.textContent = '';
-        statusDiv.className = 'donation-status';
-    }, 5000);
+    // Formatar endereço: 0x1234...5678
+    const shortAddr = `${userAddress.substring(0, 6)}...${userAddress.substring(userAddress.length - 4)}`;
+    document.getElementById('user-address').innerText = shortAddr;
+    
+    // Adicionar listener para mudança de conta
+    window.ethereum.on('accountsChanged', () => window.location.reload());
+    window.ethereum.on('chainChanged', () => window.location.reload());
 }
 
-// Copy address from the main display
-function copyMainAddress() {
-    const address = WALLET_ADDRESS;
+async function loadBalances() {
+    if (!tokenContract) return;
     
-    navigator.clipboard.writeText(address).then(() => {
-        showDonationStatus('✓ Address copied to clipboard!', 'success');
-    }).catch(err => {
-        console.error('Copy failed:', err);
-        showDonationStatus('Failed to copy address', 'info');
-    });
+    try {
+        const userBal = await tokenContract.balanceOf(userAddress);
+        // Formata de Wei (18 decimais) para Ether/Token
+        document.getElementById('dmt-balance').innerText = ethers.formatUnits(userBal, 18);
+    } catch (err) {
+        console.error("Erro ao ler saldo:", err);
+    }
 }
 
-// Copy crypto address to clipboard
-function copyAddress(inputId) {
-    const input = document.getElementById(inputId);
-    input.select();
-    input.setSelectionRange(0, 99999);
+async function claimTokens() {
+    const claimBtn = document.getElementById('claim-btn');
+    const txStatus = document.getElementById('tx-status');
     
-    navigator.clipboard.writeText(input.value).then(() => {
-        const notification = document.getElementById('copyNotification');
-        notification.textContent = '✓ Address copied to clipboard!';
-        notification.classList.add('show');
+    try {
+        claimBtn.disabled = true;
+        claimBtn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Processing...';
+        txStatus.innerHTML = '<span style="color: #fca5a5;">Aguardando confirmação na carteira...</span>';
+
+        const tx = await tokenContract.claim();
+        
+        txStatus.innerHTML = '<span style="color: #fcd34d;">Transação enviada! Aguardando mineração...</span>';
+        
+        await tx.wait(); // Espera confirmação do bloco
+
+        // Sucesso
+        claimBtn.innerHTML = '<i class="fas fa-check"></i> Success!';
+        claimBtn.style.background = '#00ff88';
+        claimBtn.style.color = '#000';
+        
+        txStatus.innerHTML = '<span style="color: #00ff88;">Tokens recebidos com sucesso! 🎉</span>';
+        
+        // Atualiza saldo
+        setTimeout(loadBalances, 2000);
+        
+        // Reset botão após 5s
+        setTimeout(() => {
+            claimBtn.disabled = false;
+            claimBtn.innerHTML = '🎁 Claim Tokens';
+            claimBtn.style = ''; // Remove inline styles
+            txStatus.innerHTML = '';
+        }, 5000);
+
+    } catch (error) {
+        console.error("Erro no claim:", error);
+        claimBtn.disabled = false;
+        claimBtn.innerHTML = '<i class="fas fa-times"></i> Failed';
+        
+        if (error.reason && error.reason.includes("cooldown")) {
+            txStatus.innerHTML = '<span style="color: #ff007a;">Erro: Aguarde 24h entre os claims.</span>';
+        } else {
+            txStatus.innerHTML = '<span style="color: #ff007a;">Transação cancelada ou falhou.</span>';
+        }
         
         setTimeout(() => {
-            notification.classList.remove('show');
+            claimBtn.innerHTML = '🎁 Claim Tokens';
+            txStatus.innerHTML = '';
         }, 3000);
-    }).catch(err => {
-        alert('Failed to copy address');
-        console.error('Copy failed:', err);
-    });
+    }
 }
 
-// Generate QR Code for the wallet address
-function generateQRCode() {
-    const canvas = document.getElementById('qrCanvas');
-    const size = 200;
-    
-    // Simple QR code generation using a library approach
-    // For production, you'd want to use a proper QR library like qrcode.js
-    // This is a placeholder that creates a styled canvas
-    
-    const ctx = canvas.getContext('2d');
-    canvas.width = size;
-    canvas.height = size;
-    
-    // Create a grid pattern (simplified QR representation)
-    const blockSize = 10;
-    const blocks = size / blockSize;
-    
-    // Fill background
-    ctx.fillStyle = '#000000';
-    ctx.fillRect(0, 0, size, size);
-    
-    // Create white blocks in a pattern
-    ctx.fillStyle = '#FFFFFF';
-    for (let i = 0; i < blocks; i++) {
-        for (let j = 0; j < blocks; j++) {
-            // Create a pseudo-random pattern based on the address
-            const hash = WALLET_ADDRESS.charCodeAt(i % WALLET_ADDRESS.length) + 
-                         WALLET_ADDRESS.charCodeAt(j % WALLET_ADDRESS.length);
-            if (hash % 2 === 0) {
-                ctx.fillRect(i * blockSize, j * blockSize, blockSize - 1, blockSize - 1);
-            }
-        }
-    }
-    
-    // Add centered text
-    ctx.fillStyle = '#FFFFFF';
-    ctx.font = 'bold 12px monospace';
-    ctx.textAlign = 'center';
-    ctx.fillText('ETH', size / 2, size / 2);
-    
-    // Add note about using a real QR library
-    console.log('Note: For production, integrate a proper QR code library like qrcode.js');
-    console.log('Address to encode:', WALLET_ADDRESS);
-}
-
-// Initialize on page load
-document.addEventListener('DOMContentLoaded', () => {
-    // Set up faucet buttons
-    const connectFaucetBtn = document.getElementById('connectFaucetWallet');
-    const claimBtn = document.getElementById('claimTokens');
-
-    if (connectFaucetBtn) connectFaucetBtn.addEventListener('click', connectFaucetWallet);
-    if (claimBtn) claimBtn.addEventListener('click', claimFaucetTokens);
-
-    // Set up wallet button for donations
-    const openWalletBtn = document.getElementById('openWallet');
-    if (openWalletBtn) openWalletBtn.addEventListener('click', openWalletForDonation);
-
-    // Generate QR code
-    generateQRCode();
-
-    // Listen for account and network changes
-    if (typeof window.ethereum !== 'undefined') {
-        window.ethereum.on('accountsChanged', (accounts) => {
-            if (!accounts || accounts.length === 0) {
-                // Disconnected
-                userAddress = null;
-                signer = null;
-                provider = null;
-                tokenContract = null;
-
-                document.getElementById('faucetWalletStatus').classList.remove('connected');
-                document.getElementById('faucetStatusText').textContent = 'Connect your wallet to claim tokens';
-                document.getElementById('connectFaucetWallet').style.display = 'block';
-                document.getElementById('claimTokens').style.display = 'none';
-                document.getElementById('faucetWalletInfo').style.display = 'none';
-            } else {
-                // Account changed — reconnect
-                connectFaucetWallet();
-            }
-        });
-
-        window.ethereum.on('chainChanged', () => {
-            // Reload to reset provider and network state
-            window.location.reload();
-        });
-
-        // If already connected (e.g., page reload), attempt to connect
-        window.ethereum.request({ method: 'eth_accounts' })
-            .then(accounts => {
-                if (accounts && accounts.length > 0) {
-                    connectFaucetWallet();
-                }
-            })
-            .catch(console.error);
-    }
-});
